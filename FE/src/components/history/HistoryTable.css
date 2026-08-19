@@ -1,0 +1,14 @@
+/* HistoryTable */
+.history-table-card {
+  padding: var(--space-4) var(--space-5);
+}
+
+.history-user {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.history-device {
+  font-weight: 500;
+  color: var(--color-text);
+}

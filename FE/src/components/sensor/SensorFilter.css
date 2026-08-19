@@ -1,0 +1,74 @@
+/* SensorFilter — 2-row layout */
+.sensor-filter {
+  margin-bottom: var(--space-6);
+}
+
+.sf-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.sf-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.sf-row {
+  display: grid;
+  gap: var(--space-4);
+  align-items: end;
+}
+
+/* Row 1: Sensor Type | Time Precision */
+.sf-row-top {
+  grid-template-columns: repeat(2, 1fr);
+  margin-bottom: var(--space-4);
+}
+
+/* Row 2: From | To | Buttons */
+.sf-row-bottom {
+  grid-template-columns: 1fr 1fr auto;
+}
+
+.sf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sf-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.sf-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+  padding-bottom: 1px;
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+  .sf-row-bottom {
+    grid-template-columns: 1fr 1fr;
+  }
+  .sf-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .sf-row-top,
+  .sf-row-bottom {
+    grid-template-columns: 1fr;
+  }
+  .sf-actions {
+    flex-direction: column;
+  }
+}

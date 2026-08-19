@@ -1,0 +1,79 @@
+/* HistoryFilter — 2-row layout */
+.history-filter {
+  margin-bottom: var(--space-6);
+}
+
+.hf-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.hf-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Row 1: 4 equal columns */
+.hf-row {
+  display: grid;
+  gap: var(--space-4);
+  align-items: end;
+}
+
+.hf-row-top {
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: var(--space-4);
+}
+
+/* Row 2: From | To | Buttons (auto) */
+.hf-row-bottom {
+  grid-template-columns: 1fr 1fr auto;
+}
+
+.hf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hf-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.hf-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+  padding-bottom: 1px;
+}
+
+/* Tablet: 2 columns per row */
+@media (max-width: 1024px) {
+  .hf-row-top {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .hf-row-bottom {
+    grid-template-columns: 1fr 1fr;
+  }
+  .hf-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Mobile: 1 column */
+@media (max-width: 640px) {
+  .hf-row-top {
+    grid-template-columns: 1fr;
+  }
+  .hf-row-bottom {
+    grid-template-columns: 1fr;
+  }
+  .hf-actions {
+    flex-direction: column;
+  }
+}

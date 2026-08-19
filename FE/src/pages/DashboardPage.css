@@ -1,0 +1,75 @@
+/* DashboardPage */
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.dashboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.section-subtitle {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+/* Stat cards */
+.stat-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+}
+
+/* Charts */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+}
+
+/* Devices */
+.devices-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .stat-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .devices-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .stat-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .devices-grid {
+    grid-template-columns: 1fr;
+  }
+  .section-header {
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+}
