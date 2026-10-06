@@ -1,21 +1,16 @@
 import { BrowserRouter } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
+import viVN from 'antd/locale/vi_VN';
+import dayjs from 'dayjs';
+import 'dayjs/locale/vi';
 import AppRoutes from './routes/AppRoutes';
-import './styles/global.css';
 
-const antdTheme = {
-  token: {
-    colorPrimary: '#7c3aed',
-    colorLink: '#7c3aed',
-    borderRadius: 10,
-    fontFamily: "'Inter', -apple-system, sans-serif",
-  },
-};
+dayjs.locale('vi');
 
 export default function App() {
   return (
     <BrowserRouter>
-      <ConfigProvider theme={antdTheme}>
+      <ConfigProvider locale={viVN}>
         <AppRoutes />
       </ConfigProvider>
     </BrowserRouter>

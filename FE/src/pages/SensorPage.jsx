@@ -1,55 +1,38 @@
 import { useState, useMemo } from 'react';
+import { Typography, message } from 'antd';
 import SensorFilter from '../components/sensor/SensorFilter';
 import SensorTable from '../components/sensor/SensorTable';
 import { allSensorData } from '../data/sensorData';
-import './SensorPage.css';
 
-/**
- * Truncate timestamp to given precision for comparison
- */
-function truncateTimestamp(ts, precision) {
-  const d = new Date(ts);
-  switch (precision) {
-    case 'day':
-      return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-    case 'hour':
-      return new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours()).getTime();
-    case 'minute':
-      return new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()).getTime();
-    case 'second':
-    default:
-      return new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()).getTime();
-  }
-}
+const { Text } = Typography;
+
+const TYPE_LABEL = { Temperature: 'nhiệt độ', Humidity: 'độ ẩm', Light: 'ánh sáng' };
 
 export default function SensorPage() {
-  const [filters, setFilters] = useState({
-    sensorType: 'All',
-    precision: 'second',
-    fromDate: null,
-    toDate: null,
-  });
-  const [loading, setLoading] = useState(false);
-  const [applied, setApplied] = useState(false);
+  const [filters, setFilters]   = useState({ sensorType: 'All', quickSearch: '' });
+  const [loading, setLoading]   = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
+  const [messageApi, contextHolder] = message.useMessage();
 
   const filteredData = useMemo(() => {
     let data = [...allSensorData];
-
-    // Filter by type
     if (filters.sensorType !== 'All') {
       data = data.filter((r) => r.type === filters.sensorType);
     }
-
-    // Filter by date range
-    if (filters.fromDate) {
-      const from = truncateTimestamp(filters.fromDate, filters.precision);
-      data = data.filter((r) => truncateTimestamp(r.timestamp, filters.precision) >= from);
+    if (filters.quickSearch && filters.quickSearch.trim()) {
+      const q = filters.quickSearch.trim().toLowerCase();
+      data = data.filter(
+        (r) =>
+          String(r.value).toLowerCase().includes(q) ||
+          String(r.sensor).toLowerCase().includes(q) ||
+          String(r.unit).toLowerCase().includes(q) ||
+          String(r.type).toLowerCase().includes(q) ||
+          (TYPE_LABEL[r.type] && TYPE_LABEL[r.type].includes(q)) ||
+          String(r.id).toLowerCase().includes(q) ||
+          String(r.time).toLowerCase().includes(q)
+      );
     }
-    if (filters.toDate) {
-      const to = truncateTimestamp(filters.toDate, filters.precision);
-      data = data.filter((r) => truncateTimestamp(r.timestamp, filters.precision) <= to);
-    }
-
     return data;
   }, [filters]);
 
@@ -57,26 +40,50 @@ export default function SensorPage() {
     setLoading(true);
     setTimeout(() => {
       setFilters(newFilters);
-      setApplied(true);
+      setSearched(newFilters.sensorType !== 'All' || !!newFilters.quickSearch?.trim());
       setLoading(false);
-    }, 300);
+    }, 250);
   };
 
   const handleReset = () => {
-    setFilters({ sensorType: 'All', precision: 'second', fromDate: null, toDate: null });
-    setApplied(false);
+    setLoading(true);
+    setResetKey((k) => k + 1);
+    setTimeout(() => {
+      setFilters({ sensorType: 'All', quickSearch: '' });
+      setSearched(false);
+      setLoading(false);
+      messageApi.success('Đã làm mới dữ liệu cảm biến');
+    }, 250);
   };
 
+  const isFiltering = searched || filters.sensorType !== 'All' || !!filters.quickSearch.trim();
+
   return (
-    <div className="sensor-page page-enter">
-      <div className="sensor-results-label">
-        {applied
-          ? `Showing ${filteredData.length} records`
-          : `Total ${allSensorData.length} records`}
+    // flex column + flex:1 để kéo dài đến footer
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0 }}>
+      {contextHolder}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        <Text type="secondary">
+          {isFiltering
+            ? `Hiển thị ${filteredData.length} / ${allSensorData.length} bản ghi`
+            : `Tổng cộng ${allSensorData.length} bản ghi`}
+        </Text>
       </div>
 
-      <SensorFilter onApply={handleApply} onReset={handleReset} />
-      <SensorTable data={filteredData} loading={loading} onReset={handleReset} />
+      {/* Filter — chiều cao cố định */}
+      <div style={{ flexShrink: 0 }}>
+        <SensorFilter
+          onApply={handleApply}
+          onReset={handleReset}
+          loading={loading}
+          resetKey={resetKey}
+        />
+      </div>
+
+      {/* Table card — flex: 1 → kéo dài đến footer */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <SensorTable data={filteredData} loading={loading} onReset={handleReset} />
+      </div>
     </div>
   );
 }

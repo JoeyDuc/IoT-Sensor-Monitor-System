@@ -1,129 +1,178 @@
-import { useState } from 'react';
-import { Select, Button, DatePicker } from 'antd';
-import { FilterOutlined, ReloadOutlined } from '@ant-design/icons';
+import { useState, useEffect } from 'react';
+import { Card, Select, Button, DatePicker, Space, Row, Col, Typography, Input } from 'antd';
+import { SearchOutlined, ReloadOutlined, FilterOutlined } from '@ant-design/icons';
 import { DEVICES, ACTIONS, STATUSES } from '../../data/historyData';
-import './HistoryFilter.css';
 
 const { Option } = Select;
+const { Text } = Typography;
 
-const TIME_PRECISIONS = [
-  { label: 'Second', value: 'second', format: 'DD/MM/YYYY HH:mm:ss', showTime: { format: 'HH:mm:ss' } },
-  { label: 'Minute', value: 'minute', format: 'DD/MM/YYYY HH:mm',    showTime: { format: 'HH:mm' } },
-  { label: 'Hour',   value: 'hour',   format: 'DD/MM/YYYY HH',       showTime: { format: 'HH' } },
-  { label: 'Day',    value: 'day',    format: 'DD/MM/YYYY',           showTime: false },
-];
+const DT_FORMAT   = 'DD/MM/YYYY HH:mm:ss';
+const DT_SHOWTIME = { format: 'HH:mm:ss' };
 
-export default function HistoryFilter({ onApply, onReset }) {
-  const [device, setDevice]     = useState('All Devices');
-  const [action, setAction]     = useState('All Actions');
-  const [status, setStatus]     = useState('All Status');
-  const [precision, setPrecision] = useState('minute');
+const DEVICE_LABEL = {
+  'All Devices':        'Tất cả thiết bị',
+  'Temperature Sensor': 'Cảm biến nhiệt độ',
+  'Humidity Sensor':    'Cảm biến độ ẩm',
+  'Light Sensor':       'Cảm biến ánh sáng',
+};
+const ACTION_LABEL = {
+  'All Actions': 'Tất cả hành động',
+  'TURN_ON':     'Bật',
+  'TURN_OFF':    'Tắt',
+};
+const STATUS_LABEL = {
+  'All Status': 'Tất cả trạng thái',
+  'SUCCESS':    'Thành công',
+  'FAILED':     'Thất bại',
+};
+
+export default function HistoryFilter({ onApply, onReset, loading, resetKey }) {
+  const [keyword,  setKeyword]  = useState('');
   const [fromDate, setFromDate] = useState(null);
-  const [toDate, setToDate]     = useState(null);
+  const [toDate,   setToDate]   = useState(null);
+  const [device,   setDevice]   = useState('All Devices');
+  const [action,   setAction]   = useState('All Actions');
+  const [status,   setStatus]   = useState('All Status');
 
-  const currentPrecision = TIME_PRECISIONS.find((p) => p.value === precision);
+  // Đồng bộ khi reset từ bên ngoài
+  useEffect(() => {
+    if (resetKey !== undefined) {
+      setKeyword('');
+      setFromDate(null);
+      setToDate(null);
+      setDevice('All Devices');
+      setAction('All Actions');
+      setStatus('All Status');
+    }
+  }, [resetKey]);
 
-  const handleApply = () => {
+  const handleSearch = () => {
     onApply({
-      device, action, status, precision,
+      keyword,
+      device,
+      action,
+      status,
       fromDate: fromDate ? fromDate.valueOf() : null,
       toDate:   toDate   ? toDate.valueOf()   : null,
     });
   };
 
   const handleReset = () => {
+    setKeyword('');
+    setFromDate(null);
+    setToDate(null);
     setDevice('All Devices');
     setAction('All Actions');
     setStatus('All Status');
-    setPrecision('minute');
-    setFromDate(null);
-    setToDate(null);
     onReset();
   };
 
   return (
-    <div className="history-filter nexa-card">
-      {/* Header */}
-      <div className="hf-header">
-        <FilterOutlined style={{ color: 'var(--color-primary)', fontSize: '1rem' }} />
-        <h3 className="hf-title">Filter</h3>
-      </div>
+    <Space direction="vertical" size={12} style={{ width: '100%', display: 'flex' }}>
 
-      {/* Row 1: Device | Action | Status | Time Precision */}
-      <div className="hf-row hf-row-top">
-        <div className="hf-field">
-          <label className="hf-label">Device</label>
-          <Select value={device} onChange={setDevice} style={{ width: '100%' }}>
-            {DEVICES.map((d) => <Option key={d} value={d}>{d}</Option>)}
-          </Select>
-        </div>
+      {/* ── Thanh tìm kiếm tổng quát (ấn Tìm kiếm hoặc Enter mới lọc) ── */}
+      <Input
+        size="large"
+        allowClear
+        prefix={<SearchOutlined style={{ color: '#8c8c8c' }} />}
+        placeholder="Tìm kiếm..."
+        value={keyword}
+        onChange={(e) => setKeyword(e.target.value)}
+        onPressEnter={handleSearch}
+        style={{ borderRadius: 8 }}
+      />
 
-        <div className="hf-field">
-          <label className="hf-label">Action</label>
-          <Select value={action} onChange={setAction} style={{ width: '100%' }}>
-            {ACTIONS.map((a) => <Option key={a} value={a}>{a}</Option>)}
-          </Select>
-        </div>
+      {/* ── Bộ lọc nâng cao ── */}
+      <Card
+        size="small"
+        title={
+          <Space size={6}>
+            <FilterOutlined />
+            <span>Bộ lọc nâng cao</span>
+          </Space>
+        }
+        style={{ borderRadius: 10 }}
+      >
+        <Row gutter={[12, 12]}>
+          {/* Thiết bị */}
+          <Col xs={24} sm={12} md={6}>
+            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Thiết bị</Text>
+            <Select value={device} onChange={(v) => setDevice(v)} style={{ width: '100%' }}>
+              {DEVICES.map((d) => (
+                <Option key={d} value={d}>{DEVICE_LABEL[d] || d}</Option>
+              ))}
+            </Select>
+          </Col>
 
-        <div className="hf-field">
-          <label className="hf-label">Status</label>
-          <Select value={status} onChange={setStatus} style={{ width: '100%' }}>
-            {STATUSES.map((s) => <Option key={s} value={s}>{s}</Option>)}
-          </Select>
-        </div>
+          {/* Hành động */}
+          <Col xs={12} sm={6} md={4}>
+            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Hành động</Text>
+            <Select value={action} onChange={(v) => setAction(v)} style={{ width: '100%' }}>
+              {ACTIONS.map((a) => (
+                <Option key={a} value={a}>{ACTION_LABEL[a] || a}</Option>
+              ))}
+            </Select>
+          </Col>
 
-        <div className="hf-field">
-          <label className="hf-label">Time Precision</label>
-          <Select
-            value={precision}
-            onChange={(val) => { setPrecision(val); setFromDate(null); setToDate(null); }}
-            style={{ width: '100%' }}
-          >
-            {TIME_PRECISIONS.map((p) => (
-              <Option key={p.value} value={p.value}>{p.label}</Option>
-            ))}
-          </Select>
-        </div>
-      </div>
+          {/* Trạng thái */}
+          <Col xs={12} sm={6} md={4}>
+            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Trạng thái</Text>
+            <Select value={status} onChange={(v) => setStatus(v)} style={{ width: '100%' }}>
+              {STATUSES.map((s) => (
+                <Option key={s} value={s}>{STATUS_LABEL[s] || s}</Option>
+              ))}
+            </Select>
+          </Col>
 
-      {/* Row 2: From | To | Buttons */}
-      <div className="hf-row hf-row-bottom">
-        <div className="hf-field">
-          <label className="hf-label">From</label>
-          <DatePicker
-            value={fromDate}
-            onChange={setFromDate}
-            showTime={currentPrecision.showTime || false}
-            format={currentPrecision.format}
-            placeholder={`From (${currentPrecision.format})`}
-            style={{ width: '100%' }}
-            allowClear
-          />
-        </div>
+          {/* Từ ngày */}
+          <Col xs={24} sm={12} md={5}>
+            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Từ ngày</Text>
+            <DatePicker
+              value={fromDate}
+              onChange={setFromDate}
+              showTime={DT_SHOWTIME}
+              format={DT_FORMAT}
+              placeholder="DD/MM/YYYY HH:mm:ss"
+              style={{ width: '100%' }}
+              allowClear
+            />
+          </Col>
 
-        <div className="hf-field">
-          <label className="hf-label">To</label>
-          <DatePicker
-            value={toDate}
-            onChange={setToDate}
-            showTime={currentPrecision.showTime || false}
-            format={currentPrecision.format}
-            placeholder={`To (${currentPrecision.format})`}
-            style={{ width: '100%' }}
-            disabledDate={(d) => fromDate && d.isBefore(fromDate, 'day')}
-            allowClear
-          />
-        </div>
+          {/* Đến ngày */}
+          <Col xs={24} sm={12} md={5}>
+            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Đến ngày</Text>
+            <DatePicker
+              value={toDate}
+              onChange={setToDate}
+              showTime={DT_SHOWTIME}
+              format={DT_FORMAT}
+              placeholder="DD/MM/YYYY HH:mm:ss"
+              style={{ width: '100%' }}
+              disabledDate={(d) => fromDate && d.isBefore(fromDate, 'day')}
+              allowClear
+            />
+          </Col>
 
-        <div className="hf-actions">
-          <Button type="primary" icon={<FilterOutlined />} onClick={handleApply}>
-            Apply Filter
-          </Button>
-          <Button icon={<ReloadOutlined />} onClick={handleReset}>
-            Reset
-          </Button>
-        </div>
-      </div>
-    </div>
+          {/* Nút hành động — hàng riêng, căn phải */}
+          <Col xs={24} style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={handleSearch}
+              loading={loading}
+            >
+              Tìm kiếm
+            </Button>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={handleReset}
+            >
+              Làm mới
+            </Button>
+          </Col>
+        </Row>
+      </Card>
+
+    </Space>
   );
 }

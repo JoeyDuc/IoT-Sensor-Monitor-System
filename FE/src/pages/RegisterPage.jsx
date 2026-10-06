@@ -1,53 +1,46 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Form, Input, Button, Alert, Steps } from 'antd';
-import {
-  UserOutlined,
-  LockOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  ThunderboltOutlined,
-  CheckCircleFilled,
-} from '@ant-design/icons';
-import './RegisterPage.css';
+import { Form, Input, Button, Alert, Steps, Card, Typography, Space, Result } from 'antd';
+import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
 
-const STEPS = ['Account Info', 'Personal Info', 'Done'];
+const { Title, Text } = Typography;
+
+const STEPS = [
+  { title: 'Tài khoản' },
+  { title: 'Cá nhân' },
+  { title: 'Hoàn thành' },
+];
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [formData, setFormData] = useState({});
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState('');
+  const [formData, setFormData]       = useState({});
   const [form] = Form.useForm();
 
-  /* ── Step 0: Account credentials ── */
   const handleStep0 = (values) => {
     setError('');
-    // Mock: check duplicate username
     if (values.username === 'admin') {
-      setError('Username "admin" already exists. Please choose another.');
+      setError('Tên đăng nhập "admin" đã tồn tại. Vui lòng chọn tên khác.');
       return;
     }
     setFormData((prev) => ({ ...prev, ...values }));
     setCurrentStep(1);
   };
 
-  /* ── Step 1: Personal info ── */
   const handleStep1 = (values) => {
     setLoading(true);
     setError('');
     const finalData = { ...formData, ...values };
-    // Simulate register delay
     setTimeout(() => {
-      // Store mock user in localStorage
       const users = JSON.parse(localStorage.getItem('nexa_users') || '[]');
       users.push({
-        username: finalData.username,
-        password: finalData.password,
-        fullName: finalData.fullName,
-        email: finalData.email,
-        phone: finalData.phone || '',
+        username:  finalData.username,
+        password:  finalData.password,
+        fullName:  finalData.fullName,
+        email:     finalData.email,
+        phone:     finalData.phone || '',
         createdAt: new Date().toISOString(),
       });
       localStorage.setItem('nexa_users', JSON.stringify(users));
@@ -56,215 +49,135 @@ export default function RegisterPage() {
     }, 1000);
   };
 
-  const handleGoLogin = () => {
-    navigate('/login');
-  };
-
   return (
-    <div className="register-page">
-      {/* Left panel */}
-      <div className="register-panel-left">
-        <div className="register-brand">
-          <div className="register-brand-icon">
-            <ThunderboltOutlined />
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#f5f5f5',
+      padding: 24,
+    }}>
+      <Card style={{ width: 480 }}>
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <div>
+            <Title level={3} style={{ marginBottom: 4 }}>Đăng ký tài khoản</Title>
+            <Text type="secondary">Tạo tài khoản để sử dụng hệ thống IoT</Text>
           </div>
-          <h2>NEXA IoT</h2>
-        </div>
-        <div className="register-panel-content">
-          <h1>Join NEXA IoT</h1>
-          <p>
-            Create your account and start managing your IoT devices with a unified, real-time platform.
-          </p>
-          <div className="register-features">
-            <div className="register-feature-item">
-              <span className="register-feature-dot" />
-              Free to get started
-            </div>
-            <div className="register-feature-item">
-              <span className="register-feature-dot" />
-              Real-time sensor monitoring
-            </div>
-            <div className="register-feature-item">
-              <span className="register-feature-dot" />
-              Secure device management
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Right panel */}
-      <div className="register-panel-right">
-        <div className="register-form-wrapper">
+          <Steps current={currentStep} items={STEPS} size="small" />
 
-          {/* Steps indicator */}
-          <Steps
-            current={currentStep}
-            size="small"
-            className="register-steps"
-            items={STEPS.map((s, i) => ({ title: s }))}
-          />
-
-          {/* ── Step 0 ── */}
+          {/* Bước 0: Tài khoản */}
           {currentStep === 0 && (
             <>
-              <div className="register-form-header">
-                <h2>Create account</h2>
-                <p>Set up your login credentials.</p>
-              </div>
-
-              {error && (
-                <Alert
-                  message={error}
-                  type="error"
-                  showIcon
-                  style={{ marginBottom: 20, borderRadius: 10 }}
-                />
-              )}
-
-              <Form
-                form={form}
-                layout="vertical"
-                onFinish={handleStep0}
-                autoComplete="off"
-                size="large"
-              >
+              {error && <Alert message={error} type="error" showIcon />}
+              <Form form={form} layout="vertical" onFinish={handleStep0} autoComplete="off">
                 <Form.Item
                   name="username"
-                  label="Username"
+                  label="Tên đăng nhập"
                   rules={[
-                    { required: true, message: 'Please enter a username' },
-                    { min: 3, message: 'At least 3 characters' },
-                    { pattern: /^[a-zA-Z0-9_]+$/, message: 'Letters, numbers and underscore only' },
+                    { required: true, message: 'Vui lòng nhập tên đăng nhập' },
+                    { min: 3, message: 'Ít nhất 3 ký tự' },
+                    { pattern: /^[a-zA-Z0-9_]+$/, message: 'Chỉ dùng chữ, số và dấu gạch dưới' },
                   ]}
                 >
-                  <Input prefix={<UserOutlined style={{ color: '#a78bfa' }} />} placeholder="Choose a username" />
+                  <Input prefix={<UserOutlined />} placeholder="Nhập tên đăng nhập" />
                 </Form.Item>
 
                 <Form.Item
                   name="password"
-                  label="Password"
+                  label="Mật khẩu"
                   rules={[
-                    { required: true, message: 'Please enter a password' },
-                    { min: 6, message: 'At least 6 characters' },
+                    { required: true, message: 'Vui lòng nhập mật khẩu' },
+                    { min: 6, message: 'Ít nhất 6 ký tự' },
                   ]}
                 >
-                  <Input.Password prefix={<LockOutlined style={{ color: '#a78bfa' }} />} placeholder="Create password" />
+                  <Input.Password prefix={<LockOutlined />} placeholder="Tạo mật khẩu" />
                 </Form.Item>
 
                 <Form.Item
                   name="confirmPassword"
-                  label="Confirm Password"
+                  label="Xác nhận mật khẩu"
                   dependencies={['password']}
                   rules={[
-                    { required: true, message: 'Please confirm your password' },
+                    { required: true, message: 'Vui lòng xác nhận mật khẩu' },
                     ({ getFieldValue }) => ({
                       validator(_, value) {
-                        if (!value || getFieldValue('password') === value) {
-                          return Promise.resolve();
-                        }
-                        return Promise.reject('Passwords do not match');
+                        if (!value || getFieldValue('password') === value) return Promise.resolve();
+                        return Promise.reject('Mật khẩu không khớp');
                       },
                     }),
                   ]}
                 >
-                  <Input.Password prefix={<LockOutlined style={{ color: '#a78bfa' }} />} placeholder="Confirm password" />
+                  <Input.Password prefix={<LockOutlined />} placeholder="Nhập lại mật khẩu" />
                 </Form.Item>
 
                 <Form.Item style={{ marginBottom: 0 }}>
-                  <Button type="primary" htmlType="submit" block className="register-btn">
-                    Continue →
-                  </Button>
+                  <Button type="primary" htmlType="submit" block>Tiếp theo →</Button>
                 </Form.Item>
               </Form>
             </>
           )}
 
-          {/* ── Step 1 ── */}
+          {/* Bước 1: Thông tin cá nhân */}
           {currentStep === 1 && (
             <>
-              <div className="register-form-header">
-                <h2>Personal info</h2>
-                <p>Tell us a bit about yourself.</p>
-              </div>
-
-              {error && (
-                <Alert
-                  message={error}
-                  type="error"
-                  showIcon
-                  style={{ marginBottom: 20, borderRadius: 10 }}
-                />
-              )}
-
-              <Form
-                layout="vertical"
-                onFinish={handleStep1}
-                autoComplete="off"
-                size="large"
-              >
+              {error && <Alert message={error} type="error" showIcon />}
+              <Form layout="vertical" onFinish={handleStep1} autoComplete="off">
                 <Form.Item
                   name="fullName"
-                  label="Full Name"
-                  rules={[{ required: true, message: 'Please enter your full name' }]}
+                  label="Họ và tên"
+                  rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
                 >
-                  <Input prefix={<UserOutlined style={{ color: '#a78bfa' }} />} placeholder="Your full name" />
+                  <Input prefix={<UserOutlined />} placeholder="Họ và tên của bạn" />
                 </Form.Item>
 
                 <Form.Item
                   name="email"
                   label="Email"
                   rules={[
-                    { required: true, message: 'Please enter your email' },
-                    { type: 'email', message: 'Invalid email format' },
+                    { required: true, message: 'Vui lòng nhập email' },
+                    { type: 'email', message: 'Email không hợp lệ' },
                   ]}
                 >
-                  <Input prefix={<MailOutlined style={{ color: '#a78bfa' }} />} placeholder="your@email.com" />
+                  <Input prefix={<MailOutlined />} placeholder="email@example.com" />
                 </Form.Item>
 
-                <Form.Item name="phone" label="Phone (optional)">
-                  <Input prefix={<PhoneOutlined style={{ color: '#a78bfa' }} />} placeholder="+84 xxx xxx xxx" />
+                <Form.Item name="phone" label="Số điện thoại (tuỳ chọn)">
+                  <Input prefix={<PhoneOutlined />} placeholder="+84 xxx xxx xxx" />
                 </Form.Item>
 
-                <div className="register-step1-actions">
-                  <Button onClick={() => setCurrentStep(0)} className="register-back-btn">
-                    ← Back
+                <Space>
+                  <Button onClick={() => setCurrentStep(0)}>← Quay lại</Button>
+                  <Button type="primary" htmlType="submit" loading={loading}>
+                    Tạo tài khoản
                   </Button>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    loading={loading}
-                    className="register-btn register-btn-flex"
-                  >
-                    Create Account
-                  </Button>
-                </div>
+                </Space>
               </Form>
             </>
           )}
 
-          {/* ── Step 2: Success ── */}
+          {/* Bước 2: Thành công */}
           {currentStep === 2 && (
-            <div className="register-success">
-              <CheckCircleFilled className="register-success-icon" />
-              <h2>Account created!</h2>
-              <p>
-                Welcome, <strong>{formData.username}</strong>! Your account has been successfully created.
-              </p>
-              <Button type="primary" block className="register-btn" onClick={handleGoLogin}>
-                Go to Login
-              </Button>
-            </div>
+            <Result
+              status="success"
+              title="Tạo tài khoản thành công!"
+              subTitle={`Chào mừng, ${formData.username}! Tài khoản đã được tạo thành công.`}
+              extra={[
+                <Button type="primary" key="login" onClick={() => navigate('/login')}>
+                  Đến trang đăng nhập
+                </Button>,
+              ]}
+            />
           )}
 
-          {/* Footer link (only on steps 0 & 1) */}
           {currentStep < 2 && (
-            <p className="register-login-link">
-              Already have an account?{' '}
-              <Link to="/login">Sign in</Link>
-            </p>
+            <Text>
+              Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
+            </Text>
           )}
-        </div>
-      </div>
+        </Space>
+      </Card>
     </div>
   );
 }

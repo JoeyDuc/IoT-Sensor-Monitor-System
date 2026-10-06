@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import LoginPage from '../pages/LoginPage';
+import RegisterPage from '../pages/RegisterPage';
 import DashboardPage from '../pages/DashboardPage';
 import SensorPage from '../pages/SensorPage';
 import DeviceControlHistoryPage from '../pages/DeviceControlHistoryPage';
@@ -16,6 +17,7 @@ export default function AppRoutes() {
     <Routes>
       {/* Public */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
 
       {/* Protected */}
       <Route

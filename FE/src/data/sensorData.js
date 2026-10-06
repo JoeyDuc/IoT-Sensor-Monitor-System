@@ -10,6 +10,27 @@ import dayjs from 'dayjs';
  * @param {number} daysCount
  * @param {number} readingsPerDay
  */
+// Deterministic status/connection from index so data looks varied
+function deriveStatus(value, type) {
+  // Simple thresholds per type
+  if (type === 'Temperature') {
+    if (value >= 35) return 'Error';
+    if (value >= 30) return 'Warning';
+    return 'Normal';
+  }
+  if (type === 'Humidity') {
+    if (value >= 85 || value <= 20) return 'Error';
+    if (value >= 75 || value <= 30) return 'Warning';
+    return 'Normal';
+  }
+  if (type === 'Light') {
+    if (value >= 800) return 'Error';
+    if (value >= 650) return 'Warning';
+    return 'Normal';
+  }
+  return 'Normal';
+}
+
 function generateReadings(sensorName, type, baseValues, unit, startDate, daysCount, readingsPerDay) {
   const readings = [];
   let id = 1;
@@ -26,12 +47,18 @@ function generateReadings(sensorName, type, baseValues, unit, startDate, daysCou
         .add(h * Math.floor((24 * 60) / readingsPerDay), 'minute')
         .add(Math.floor(Math.random() * 59), 'second');
 
+      // ~90% Online, ~10% Offline — use sequential index for determinism
+      const connection = (id % 10 === 0) ? 'Offline' : 'Online';
+      const status = deriveStatus(value, type);
+
       readings.push({
         id: `${type.toLowerCase()}-${id++}`,
         sensor: sensorName,
         type,
         value,
         unit,
+        status,
+        connection,
         time: time.format('DD/MM/YYYY HH:mm:ss'),
         timestamp: time.valueOf(),
       });
@@ -100,13 +127,41 @@ export const dashboardChartData = {
   temperature: temperatureData.slice(-24).map((r) => ({
     time: r.time.split(' ')[1].substring(0, 5), // HH:mm
     value: r.value,
+    timestamp: r.timestamp,
+    fullTime: r.time,
   })),
   humidity: humidityData.slice(-24).map((r) => ({
     time: r.time.split(' ')[1].substring(0, 5),
     value: r.value,
+    timestamp: r.timestamp,
+    fullTime: r.time,
   })),
   light: lightData.slice(-24).map((r) => ({
     time: r.time.split(' ')[1].substring(0, 5),
     value: r.value,
+    timestamp: r.timestamp,
+    fullTime: r.time,
+  })),
+};
+
+// Full chart data (all readings) for advanced filtering in dashboard
+export const dashboardChartDataFull = {
+  temperature: temperatureData.map((r) => ({
+    time: r.time.split(' ')[1].substring(0, 5),
+    value: r.value,
+    timestamp: r.timestamp,
+    fullTime: r.time,
+  })),
+  humidity: humidityData.map((r) => ({
+    time: r.time.split(' ')[1].substring(0, 5),
+    value: r.value,
+    timestamp: r.timestamp,
+    fullTime: r.time,
+  })),
+  light: lightData.map((r) => ({
+    time: r.time.split(' ')[1].substring(0, 5),
+    value: r.value,
+    timestamp: r.timestamp,
+    fullTime: r.time,
   })),
 };
