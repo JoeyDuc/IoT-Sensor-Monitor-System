@@ -10,10 +10,10 @@ const DT_FORMAT   = 'DD/MM/YYYY HH:mm:ss';
 const DT_SHOWTIME = { format: 'HH:mm:ss' };
 
 const DEVICE_LABEL = {
-  'All Devices':        'Tất cả thiết bị',
-  'Temperature Sensor': 'Cảm biến nhiệt độ',
-  'Humidity Sensor':    'Cảm biến độ ẩm',
-  'Light Sensor':       'Cảm biến ánh sáng',
+  'All Devices':          'Tất cả thiết bị',
+  'Đèn LED 1 (Nhiệt độ)': 'Đèn LED 1 (Nhiệt độ)',
+  'Đèn LED 2 (Độ ẩm)':    'Đèn LED 2 (Độ ẩm)',
+  'Đèn LED 3 (Ánh sáng)': 'Đèn LED 3 (Ánh sáng)',
 };
 const ACTION_LABEL = {
   'All Actions': 'Tất cả hành động',
@@ -57,6 +57,81 @@ export default function HistoryFilter({ onApply, onReset, loading, resetKey }) {
     });
   };
 
+  const handleDeviceChange = (v) => {
+    setDevice(v);
+    onApply({
+      keyword,
+      device: v,
+      action,
+      status,
+      fromDate: fromDate ? fromDate.valueOf() : null,
+      toDate:   toDate   ? toDate.valueOf()   : null,
+    });
+  };
+
+  const handleActionChange = (v) => {
+    setAction(v);
+    onApply({
+      keyword,
+      device,
+      action: v,
+      status,
+      fromDate: fromDate ? fromDate.valueOf() : null,
+      toDate:   toDate   ? toDate.valueOf()   : null,
+    });
+  };
+
+  const handleStatusChange = (v) => {
+    setStatus(v);
+    onApply({
+      keyword,
+      device,
+      action,
+      status: v,
+      fromDate: fromDate ? fromDate.valueOf() : null,
+      toDate:   toDate   ? toDate.valueOf()   : null,
+    });
+  };
+
+  const handleFromDateChange = (v) => {
+    setFromDate(v);
+    onApply({
+      keyword,
+      device,
+      action,
+      status,
+      fromDate: v ? v.valueOf() : null,
+      toDate:   toDate ? toDate.valueOf() : null,
+    });
+  };
+
+  const handleToDateChange = (v) => {
+    setToDate(v);
+    onApply({
+      keyword,
+      device,
+      action,
+      status,
+      fromDate: fromDate ? fromDate.valueOf() : null,
+      toDate:   v ? v.valueOf() : null,
+    });
+  };
+
+  const handleKeywordChange = (e) => {
+    const val = e.target.value;
+    setKeyword(val);
+    if (!val) {
+      onApply({
+        keyword: '',
+        device,
+        action,
+        status,
+        fromDate: fromDate ? fromDate.valueOf() : null,
+        toDate:   toDate   ? toDate.valueOf()   : null,
+      });
+    }
+  };
+
   const handleReset = () => {
     setKeyword('');
     setFromDate(null);
@@ -77,7 +152,7 @@ export default function HistoryFilter({ onApply, onReset, loading, resetKey }) {
         prefix={<SearchOutlined style={{ color: '#8c8c8c' }} />}
         placeholder="Tìm kiếm..."
         value={keyword}
-        onChange={(e) => setKeyword(e.target.value)}
+        onChange={handleKeywordChange}
         onPressEnter={handleSearch}
         style={{ borderRadius: 8 }}
       />
@@ -97,7 +172,7 @@ export default function HistoryFilter({ onApply, onReset, loading, resetKey }) {
           {/* Thiết bị */}
           <Col xs={24} sm={12} md={6}>
             <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Thiết bị</Text>
-            <Select value={device} onChange={(v) => setDevice(v)} style={{ width: '100%' }}>
+            <Select value={device} onChange={handleDeviceChange} style={{ width: '100%' }}>
               {DEVICES.map((d) => (
                 <Option key={d} value={d}>{DEVICE_LABEL[d] || d}</Option>
               ))}
@@ -107,7 +182,7 @@ export default function HistoryFilter({ onApply, onReset, loading, resetKey }) {
           {/* Hành động */}
           <Col xs={12} sm={6} md={4}>
             <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Hành động</Text>
-            <Select value={action} onChange={(v) => setAction(v)} style={{ width: '100%' }}>
+            <Select value={action} onChange={handleActionChange} style={{ width: '100%' }}>
               {ACTIONS.map((a) => (
                 <Option key={a} value={a}>{ACTION_LABEL[a] || a}</Option>
               ))}
@@ -117,7 +192,7 @@ export default function HistoryFilter({ onApply, onReset, loading, resetKey }) {
           {/* Trạng thái */}
           <Col xs={12} sm={6} md={4}>
             <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Trạng thái</Text>
-            <Select value={status} onChange={(v) => setStatus(v)} style={{ width: '100%' }}>
+            <Select value={status} onChange={handleStatusChange} style={{ width: '100%' }}>
               {STATUSES.map((s) => (
                 <Option key={s} value={s}>{STATUS_LABEL[s] || s}</Option>
               ))}
@@ -129,7 +204,7 @@ export default function HistoryFilter({ onApply, onReset, loading, resetKey }) {
             <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Từ ngày</Text>
             <DatePicker
               value={fromDate}
-              onChange={setFromDate}
+              onChange={handleFromDateChange}
               showTime={DT_SHOWTIME}
               format={DT_FORMAT}
               placeholder="DD/MM/YYYY HH:mm:ss"
@@ -143,7 +218,7 @@ export default function HistoryFilter({ onApply, onReset, loading, resetKey }) {
             <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>Đến ngày</Text>
             <DatePicker
               value={toDate}
-              onChange={setToDate}
+              onChange={handleToDateChange}
               showTime={DT_SHOWTIME}
               format={DT_FORMAT}
               placeholder="DD/MM/YYYY HH:mm:ss"

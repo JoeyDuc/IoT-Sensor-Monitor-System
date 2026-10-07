@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Typography, message } from 'antd';
 import HistoryFilter from '../components/history/HistoryFilter';
 import HistoryTable from '../components/history/HistoryTable';
 import { historyData } from '../data/historyData';
+import { api } from '../services/api';
 
 const { Text } = Typography;
 
@@ -18,13 +19,46 @@ export default function DeviceControlHistoryPage() {
     fromDate: null,
     toDate:   null,
   });
-  const [loading, setLoading]   = useState(false);
-  const [searched, setSearched] = useState(false);
-  const [resetKey, setResetKey] = useState(0);
-  const [messageApi, contextHolder] = message.useMessage();
+  const [backendHistory, setBackendHistory] = useState(null);
+  const [totalCount, setTotalCount]         = useState(0);
+  const [loading, setLoading]               = useState(false);
+  const [searched, setSearched]             = useState(false);
+  const [resetKey, setResetKey]             = useState(0);
+  const [messageApi, contextHolder]         = message.useMessage();
 
-  /* Lọc dữ liệu — CHỈ thực hiện dựa trên filters đã bấm Tìm kiếm */
+  const fetchHistory = useCallback(async (currentFilters) => {
+    setLoading(true);
+    try {
+      const res = await api.getHistory({
+        keyword: currentFilters.keyword || '',
+        device: currentFilters.device,
+        action: currentFilters.action,
+        status: currentFilters.status,
+        fromDate: currentFilters.fromDate,
+        toDate: currentFilters.toDate,
+        page: 1,
+        size: 1000,
+      });
+      if (res && Array.isArray(res.content)) {
+        setBackendHistory(res.content);
+        setTotalCount(res.totalElements ?? res.content.length);
+      }
+    } catch (err) {
+      console.warn('Backend history fetch failed, using local mock data', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHistory(filters);
+  }, []); // Run on mount
+
+  /* Lọc dữ liệu — Sử dụng backendHistory nếu có, fallback sang historyData */
   const displayData = useMemo(() => {
+    if (backendHistory !== null) {
+      return backendHistory;
+    }
     let data = [...historyData];
     if (filters.fromDate) data = data.filter((r) => r.timestamp >= filters.fromDate);
     if (filters.toDate)   data = data.filter((r) => r.timestamp <= filters.toDate);
@@ -49,43 +83,38 @@ export default function DeviceControlHistoryPage() {
       });
     }
     return data;
-  }, [filters]);
+  }, [filters, backendHistory]);
 
   const handleApply = (newFilters) => {
-    setLoading(true);
-    setTimeout(() => {
-      setFilters(newFilters);
-      const hasFilter =
-        !!newFilters.keyword?.trim() ||
-        newFilters.device !== 'All Devices' ||
-        newFilters.action !== 'All Actions' ||
-        newFilters.status !== 'All Status' ||
-        newFilters.fromDate !== null ||
-        newFilters.toDate !== null;
-      setSearched(hasFilter);
-      setLoading(false);
-    }, 250);
+    setFilters(newFilters);
+    const hasFilter =
+      !!newFilters.keyword?.trim() ||
+      newFilters.device !== 'All Devices' ||
+      newFilters.action !== 'All Actions' ||
+      newFilters.status !== 'All Status' ||
+      newFilters.fromDate !== null ||
+      newFilters.toDate !== null;
+    setSearched(hasFilter);
+    fetchHistory(newFilters);
   };
 
   const handleReset = () => {
-    setLoading(true);
+    const emptyFilters = {
+      keyword:  '',
+      device:   'All Devices',
+      action:   'All Actions',
+      status:   'All Status',
+      fromDate: null,
+      toDate:   null,
+    };
     setResetKey((k) => k + 1);
-    setTimeout(() => {
-      setFilters({
-        keyword:  '',
-        device:   'All Devices',
-        action:   'All Actions',
-        status:   'All Status',
-        fromDate: null,
-        toDate:   null,
-      });
-      setSearched(false);
-      setLoading(false);
-      messageApi.success('Đã làm mới lịch sử điều khiển');
-    }, 250);
+    setFilters(emptyFilters);
+    setSearched(false);
+    fetchHistory(emptyFilters);
+    messageApi.success('Đã làm mới lịch sử điều khiển');
   };
 
-  const isFiltering = searched;
+  const isFiltering = searched || !!filters.keyword?.trim() || filters.device !== 'All Devices' || filters.action !== 'All Actions' || filters.status !== 'All Status' || filters.fromDate !== null || filters.toDate !== null;
 
   return (
     // flex column + flex:1 để kéo dài đến footer
@@ -94,8 +123,8 @@ export default function DeviceControlHistoryPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <Text type="secondary">
           {isFiltering
-            ? `Hiển thị ${displayData.length} / ${historyData.length} bản ghi`
-            : `Tổng cộng ${historyData.length} bản ghi`}
+            ? `Hiển thị ${displayData.length} / ${totalCount || displayData.length} bản ghi`
+            : `Tổng cộng ${totalCount || displayData.length} bản ghi`}
         </Text>
       </div>
 

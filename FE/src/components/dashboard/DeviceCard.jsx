@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, Switch, Space, Tag, Typography, Flex } from 'antd';
 import {
   ThunderboltFilled, ThunderboltOutlined,
@@ -20,8 +21,18 @@ const TYPE_LABEL = {
 };
 
 export default function DeviceCard({ device, onToggle }) {
+  const [toggling, setToggling] = useState(false);
   const isOn   = device.status === 'ON';
   const iconCfg = ICON_MAP[device.iconType] || ICON_MAP.light;
+
+  const handleSwitch = async () => {
+    setToggling(true);
+    try {
+      await onToggle(device.id);
+    } finally {
+      setToggling(false);
+    }
+  };
 
   return (
     <Card
@@ -47,7 +58,13 @@ export default function DeviceCard({ device, onToggle }) {
           </div>
         </Space>
         <Space direction="vertical" align="end" size={4}>
-          <Switch size="small" checked={isOn} onChange={() => onToggle(device.id)} />
+          <Switch
+            size="small"
+            checked={isOn}
+            loading={toggling}
+            disabled={toggling}
+            onChange={handleSwitch}
+          />
           <Tag
             color={isOn ? 'success' : 'default'}
             style={{ margin: 0, fontSize: 11, lineHeight: '18px', padding: '0 6px' }}

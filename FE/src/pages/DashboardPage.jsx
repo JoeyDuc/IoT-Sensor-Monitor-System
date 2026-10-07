@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { message, DatePicker, Radio, Space, Card, Row, Col, Typography, Tag, Statistic, Button, Flex } from 'antd';
 import {
   ArrowUpOutlined,
@@ -15,6 +15,7 @@ import SensorChart from '../components/dashboard/SensorChart';
 import DeviceCard from '../components/dashboard/DeviceCard';
 import { latestSensorSummary, dashboardChartDataFull } from '../data/sensorData';
 import { initialDevices } from '../data/deviceData';
+import { api } from '../services/api';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -29,32 +30,72 @@ const FILTER_MODE = { LAST_15: 'last15', DATE_RANGE: 'dateRange' };
 
 export default function DashboardPage() {
   const [devices, setDevices] = useState(initialDevices);
+  const [sensorSummary, setSensorSummary] = useState(latestSensorSummary);
+  const [remoteChartData, setRemoteChartData] = useState(null);
   const [messageApi, contextHolder] = message.useMessage();
   const [filterMode, setFilterMode] = useState(FILTER_MODE.LAST_15);
   const [dateRange, setDateRange] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(() => dayjs().format('HH:mm:ss'));
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => {
+  const loadData = async () => {
+    try {
+      const [devs, sum, charts] = await Promise.allSettled([
+        api.getDevices(),
+        api.getSensorSummary(),
+        api.getSensorChart(filterMode, dateRange?.[0]?.valueOf(), dateRange?.[1]?.valueOf()),
+      ]);
+      if (devs.status === 'fulfilled' && devs.value?.length) {
+        setDevices(devs.value);
+      }
+      if (sum.status === 'fulfilled' && sum.value?.temperature) {
+        setSensorSummary(sum.value);
+      }
+      if (charts.status === 'fulfilled' && charts.value?.temperature) {
+        setRemoteChartData(charts.value);
+      }
       setLastUpdated(dayjs().format('HH:mm:ss'));
-      setRefreshing(false);
-      messageApi.success('Đã làm mới dữ liệu bảng điều khiển');
-    }, 400);
+    } catch (err) {
+      console.warn('Backend load error', err);
+    }
   };
 
-  const handleToggle = (deviceId) => {
+  useEffect(() => {
+    loadData();
+    const timer = setInterval(loadData, 3000);
+    return () => clearInterval(timer);
+  }, [filterMode, dateRange]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+    messageApi.success('Đã làm mới dữ liệu bảng điều khiển');
+  };
+
+  const handleToggle = async (deviceId) => {
     const target = devices.find((d) => d.id === deviceId);
     if (!target) return;
     const newStatus = target.status === 'ON' ? 'OFF' : 'ON';
-    messageApi.success(`${target.name} đã ${newStatus === 'ON' ? 'bật' : 'tắt'}`);
     setDevices((prev) =>
       prev.map((d) => (d.id === deviceId ? { ...d, status: newStatus } : d))
     );
+    try {
+      await api.toggleDevice(deviceId);
+      messageApi.success(`${target.name} đã ${newStatus === 'ON' ? 'bật' : 'tắt'}`);
+    } catch (e) {
+      // Revert nếu lỗi
+      setDevices((prev) =>
+        prev.map((d) => (d.id === deviceId ? { ...d, status: target.status } : d))
+      );
+      messageApi.error(`Không thể điều khiển ${target.name}`);
+    }
   };
 
   const filteredChartData = useMemo(() => {
+    if (remoteChartData && remoteChartData.temperature && remoteChartData.temperature.length > 0) {
+      return remoteChartData;
+    }
     const sensors = ['temperature', 'humidity', 'light'];
     const result = {};
     sensors.forEach((key) => {
@@ -83,7 +124,7 @@ export default function DashboardPage() {
       }
     });
     return result;
-  }, [filterMode, dateRange]);
+  }, [remoteChartData, filterMode, dateRange]);
 
   const chartSubtitle = useMemo(() => {
     if (filterMode === FILTER_MODE.LAST_15) return '15 lần đo gần nhất';
@@ -93,7 +134,8 @@ export default function DashboardPage() {
     return 'Chọn khoảng thời gian';
   }, [filterMode, dateRange]);
 
-  const activeCount = devices.filter((d) => d.status === 'ON').length;
+  const controlDevices = devices.filter(d => !d.id.startsWith('sensor-'));
+  const activeCount = controlDevices.filter((d) => d.status === 'ON').length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, gap: 10, flex: 1 }}>
@@ -122,15 +164,15 @@ export default function DashboardPage() {
               <div>
                 <Text type="secondary" style={{ fontSize: 12 }}>Nhiệt độ</Text>
                 <div style={{ fontSize: 24, fontWeight: 700, color: CHART_COLORS.temperature, lineHeight: '30px' }}>
-                  {latestSensorSummary.temperature.value} <span style={{ fontSize: 13, fontWeight: 'normal' }}>{latestSensorSummary.temperature.unit}</span>
+                  {sensorSummary.temperature?.value ?? '--'} <span style={{ fontSize: 13, fontWeight: 'normal' }}>{sensorSummary.temperature?.unit ?? '°C'}</span>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <ThunderboltOutlined style={{ fontSize: 24, color: CHART_COLORS.temperature }} />
-                {latestSensorSummary.temperature.trend && (
-                  <div style={{ fontSize: 11, color: latestSensorSummary.temperature.trendUp ? '#52c41a' : '#ff4d4f', marginTop: 2 }}>
-                    {latestSensorSummary.temperature.trendUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-                    {' '}{latestSensorSummary.temperature.trend} so với hôm qua
+                {sensorSummary.temperature?.trend && (
+                  <div style={{ fontSize: 11, color: sensorSummary.temperature.trendUp ? '#52c41a' : '#ff4d4f', marginTop: 2 }}>
+                    {sensorSummary.temperature.trendUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+                    {' '}{sensorSummary.temperature.trend} so với hôm qua
                   </div>
                 )}
               </div>
@@ -144,15 +186,15 @@ export default function DashboardPage() {
               <div>
                 <Text type="secondary" style={{ fontSize: 12 }}>Độ ẩm</Text>
                 <div style={{ fontSize: 24, fontWeight: 700, color: CHART_COLORS.humidity, lineHeight: '30px' }}>
-                  {latestSensorSummary.humidity.value} <span style={{ fontSize: 13, fontWeight: 'normal' }}>{latestSensorSummary.humidity.unit}</span>
+                  {sensorSummary.humidity?.value ?? '--'} <span style={{ fontSize: 13, fontWeight: 'normal' }}>{sensorSummary.humidity?.unit ?? '%'}</span>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <DropboxOutlined style={{ fontSize: 24, color: CHART_COLORS.humidity }} />
-                {latestSensorSummary.humidity.trend && (
-                  <div style={{ fontSize: 11, color: latestSensorSummary.humidity.trendUp ? '#52c41a' : '#ff4d4f', marginTop: 2 }}>
-                    {latestSensorSummary.humidity.trendUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-                    {' '}{latestSensorSummary.humidity.trend} so với hôm qua
+                {sensorSummary.humidity?.trend && (
+                  <div style={{ fontSize: 11, color: sensorSummary.humidity.trendUp ? '#52c41a' : '#ff4d4f', marginTop: 2 }}>
+                    {sensorSummary.humidity.trendUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+                    {' '}{sensorSummary.humidity.trend} so với hôm qua
                   </div>
                 )}
               </div>
@@ -166,15 +208,15 @@ export default function DashboardPage() {
               <div>
                 <Text type="secondary" style={{ fontSize: 12 }}>Ánh sáng</Text>
                 <div style={{ fontSize: 24, fontWeight: 700, color: CHART_COLORS.light, lineHeight: '30px' }}>
-                  {latestSensorSummary.light.value} <span style={{ fontSize: 13, fontWeight: 'normal' }}>{latestSensorSummary.light.unit}</span>
+                  {sensorSummary.light?.value ?? '--'} <span style={{ fontSize: 13, fontWeight: 'normal' }}>{sensorSummary.light?.unit ?? 'lux'}</span>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <BulbOutlined style={{ fontSize: 22, color: CHART_COLORS.light }} />
-                {latestSensorSummary.light.trend && (
-                  <div style={{ fontSize: 11, color: latestSensorSummary.light.trendUp ? '#52c41a' : '#ff4d4f', marginTop: 2 }}>
-                    {latestSensorSummary.light.trendUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-                    {' '}{latestSensorSummary.light.trend} so với hôm qua
+                {sensorSummary.light?.trend && (
+                  <div style={{ fontSize: 11, color: sensorSummary.light.trendUp ? '#52c41a' : '#ff4d4f', marginTop: 2 }}>
+                    {sensorSummary.light.trendUp ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+                    {' '}{sensorSummary.light.trend} so với hôm qua
                   </div>
                 )}
               </div>
@@ -260,12 +302,12 @@ export default function DashboardPage() {
         title={
           <Space size={6}>
             <span style={{ fontWeight: 600, fontSize: 14 }}>Điều khiển thiết bị</span>
-            <Tag color="blue">{activeCount} / {devices.length} đang hoạt động</Tag>
+            <Tag color="blue">{activeCount} / {controlDevices.length} đang hoạt động</Tag>
           </Space>
         }
       >
         <Row gutter={[12, 12]}>
-          {devices.map((device) => (
+          {controlDevices.map((device) => (
             <Col xs={24} sm={12} md={8} key={device.id}>
               <DeviceCard device={device} onToggle={handleToggle} />
             </Col>

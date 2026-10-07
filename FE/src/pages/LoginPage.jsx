@@ -5,6 +5,8 @@ import { UserOutlined, LockOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
+import { api } from '../services/api';
+
 const MOCK_CREDENTIALS = { username: 'admin', password: '123456' };
 
 export default function LoginPage() {
@@ -12,10 +14,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
 
-  const handleLogin = (values) => {
+  const handleLogin = async (values) => {
     setLoading(true);
     setError('');
-    setTimeout(() => {
+    try {
+      const data = await api.login(values.username, values.password);
+      localStorage.setItem('nexa_auth', 'true');
+      localStorage.setItem('nexa_token', data.token);
+      localStorage.setItem('nexa_user', JSON.stringify(data));
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
       if (
         values.username === MOCK_CREDENTIALS.username &&
         values.password === MOCK_CREDENTIALS.password
@@ -23,10 +31,11 @@ export default function LoginPage() {
         localStorage.setItem('nexa_auth', 'true');
         navigate('/dashboard', { replace: true });
       } else {
-        setError('Tên đăng nhập hoặc mật khẩu không đúng. Thử: admin / 123456');
+        setError(err.message || 'Tên đăng nhập hoặc mật khẩu không đúng. Thử: admin / 123456');
       }
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (

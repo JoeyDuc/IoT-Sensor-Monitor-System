@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Typography, message } from 'antd';
 import SensorFilter from '../components/sensor/SensorFilter';
 import SensorTable from '../components/sensor/SensorTable';
 import { allSensorData } from '../data/sensorData';
+import { api } from '../services/api';
 
 const { Text } = Typography;
 
@@ -10,12 +11,39 @@ const TYPE_LABEL = { Temperature: 'nhiệt độ', Humidity: 'độ ẩm', Light
 
 export default function SensorPage() {
   const [filters, setFilters]   = useState({ sensorType: 'All', quickSearch: '' });
+  const [backendData, setBackendData] = useState(null);
   const [loading, setLoading]   = useState(false);
   const [searched, setSearched] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [messageApi, contextHolder] = message.useMessage();
 
+  const fetchData = useCallback(async (currentFilters) => {
+    setLoading(true);
+    try {
+      const res = await api.getSensorData({
+        sensorType: currentFilters.sensorType,
+        quickSearch: currentFilters.quickSearch,
+        page: 1,
+        size: 500,
+      });
+      if (res && Array.isArray(res.content)) {
+        setBackendData(res.content);
+      }
+    } catch (err) {
+      console.warn('Backend fetch failed, using local mock data', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData(filters);
+  }, [fetchData]);
+
   const filteredData = useMemo(() => {
+    if (backendData !== null) {
+      return backendData;
+    }
     let data = [...allSensorData];
     if (filters.sensorType !== 'All') {
       data = data.filter((r) => r.type === filters.sensorType);
@@ -34,26 +62,21 @@ export default function SensorPage() {
       );
     }
     return data;
-  }, [filters]);
+  }, [filters, backendData]);
 
   const handleApply = (newFilters) => {
-    setLoading(true);
-    setTimeout(() => {
-      setFilters(newFilters);
-      setSearched(newFilters.sensorType !== 'All' || !!newFilters.quickSearch?.trim());
-      setLoading(false);
-    }, 250);
+    setFilters(newFilters);
+    setSearched(newFilters.sensorType !== 'All' || !!newFilters.quickSearch?.trim());
+    fetchData(newFilters);
   };
 
   const handleReset = () => {
-    setLoading(true);
+    const emptyFilters = { sensorType: 'All', quickSearch: '' };
     setResetKey((k) => k + 1);
-    setTimeout(() => {
-      setFilters({ sensorType: 'All', quickSearch: '' });
-      setSearched(false);
-      setLoading(false);
-      messageApi.success('Đã làm mới dữ liệu cảm biến');
-    }, 250);
+    setFilters(emptyFilters);
+    setSearched(false);
+    fetchData(emptyFilters);
+    messageApi.success('Đã làm mới dữ liệu cảm biến');
   };
 
   const isFiltering = searched || filters.sensorType !== 'All' || !!filters.quickSearch.trim();

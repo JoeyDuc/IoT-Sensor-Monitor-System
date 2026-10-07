@@ -11,17 +11,23 @@ import {
   UploadOutlined,
   DeleteOutlined,
   CameraOutlined,
+  ApiOutlined,
+  LinkOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
+import { api } from '../services/api';
+
 const MOCK_PROFILE = {
-  fullName: 'Administrator',
+  fullName: 'Nguyễn Anh Đức',
   username: 'admin',
   email:    'admin@nexaiot.com',
   phone:    '+84 912 345 678',
-  github:   'github.com/nexaiot',
-  figma:    'figma.com/@nexaiot',
+  github:   'https://github.com/JoeyDuc/IoT-Sensor-Monitor-System',
+  figma:    'https://www.figma.com/design/5yFbc2rshXPsPXsfJwjXh2/Mai-Anh-%25C4%2590%25E1%25BB%25A9c---Figma---IoT?node-id=0-1&p=f&t=GGmhyvZX0S7u9G1L-0',
+  postman:  'https://duckuro-ptit-4075108.postman.co/workspace/Duck~e3df474c-e407-4d27-ac8b-8cefdf4a2712/collection/48640866-30ba6389-3e1e-450a-b509-1314994db700?action=share&source=copy-link&creator=48640866',
 };
 
 export default function ProfilePage() {
@@ -32,6 +38,16 @@ export default function ProfilePage() {
   const [messageApi, contextHolder]       = message.useMessage();
   const [form]   = Form.useForm();
   const [pwForm] = Form.useForm();
+
+  useEffect(() => {
+    api.getProfile().then((data) => {
+      if (data) {
+        setProfile((prev) => ({ ...prev, ...data }));
+        form.setFieldsValue(data);
+        if (data.avatarUrl) setAvatarUrl(data.avatarUrl);
+      }
+    }).catch((err) => console.warn('Using local profile', err));
+  }, [form]);
 
   const handleAvatarUpload = (file) => {
     const isImage = file.type.startsWith('image/');
@@ -53,7 +69,6 @@ export default function ProfilePage() {
         localStorage.setItem('nexa_avatar', dataUrl);
         window.dispatchEvent(new Event('nexa-avatar-change'));
       } catch (err) {
-        // In case localStorage quota exceeded
         console.warn('Storage quota error', err);
       }
       messageApi.success('Cập nhật ảnh đại diện thành công!');
@@ -69,22 +84,31 @@ export default function ProfilePage() {
     messageApi.info('Đã xóa ảnh đại diện');
   };
 
-  const handleSave = (values) => {
+  const handleSave = async (values) => {
     setSaving(true);
-    setTimeout(() => {
+    try {
+      const updated = await api.updateProfile({ ...profile, ...values, avatarUrl });
+      setProfile((prev) => ({ ...prev, ...updated }));
+      messageApi.success('Cập nhật hồ sơ thành công');
+    } catch (err) {
       setProfile((prev) => ({ ...prev, ...values }));
       messageApi.success('Cập nhật hồ sơ thành công');
+    } finally {
       setSaving(false);
-    }, 800);
+    }
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async (values) => {
     setChanging(true);
-    setTimeout(() => {
+    try {
+      await api.changePassword(values.currentPassword, values.newPassword);
       messageApi.success('Đổi mật khẩu thành công');
       pwForm.resetFields();
+    } catch (err) {
+      messageApi.error(err.message || 'Đổi mật khẩu thất bại');
+    } finally {
       setChanging(false);
-    }, 800);
+    }
   };
 
   return (
@@ -94,7 +118,7 @@ export default function ProfilePage() {
 
         {/* Left: Avatar card */}
         <Col xs={24} md={7}>
-          <Card style={{ height: '100%' }}>
+          <Card style={{ height: '100%', overflow: 'hidden' }}>
             <Flex vertical align="center" gap={8} style={{ textAlign: 'center', marginBottom: 16 }}>
               <div style={{ position: 'relative', display: 'inline-block' }}>
                 <Avatar
@@ -147,20 +171,141 @@ export default function ProfilePage() {
 
             <Divider style={{ margin: '12px 0' }} />
 
-            <Space direction="vertical" size={8} style={{ width: '100%' }}>
-              <Space>
-                <MailOutlined style={{ color: '#888' }} />
-                <Text>{profile.email}</Text>
-              </Space>
-              <Space>
-                <PhoneOutlined style={{ color: '#888' }} />
-                <Text>{profile.phone}</Text>
-              </Space>
-              <Space>
-                <GithubOutlined style={{ color: '#888' }} />
-                <Text>{profile.github}</Text>
-              </Space>
-            </Space>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', minWidth: 0 }}>
+              {/* Email */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minWidth: 0 }}>
+                <MailOutlined style={{ color: '#888', flexShrink: 0 }} />
+                <Text
+                  style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}
+                  title={profile.email}
+                >
+                  {profile.email}
+                </Text>
+              </div>
+
+              {/* Phone */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minWidth: 0 }}>
+                <PhoneOutlined style={{ color: '#888', flexShrink: 0 }} />
+                <Text
+                  style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}
+                  title={profile.phone}
+                >
+                  {profile.phone}
+                </Text>
+              </div>
+
+              {/* GitHub */}
+              {profile.github && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minWidth: 0 }}>
+                  <GithubOutlined style={{ color: '#888', flexShrink: 0 }} />
+                  <a
+                    href={profile.github}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={profile.github}
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      minWidth: 0,
+                      flex: 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      GitHub Repository
+                    </span>
+                    <LinkOutlined style={{ fontSize: 11, flexShrink: 0 }} />
+                  </a>
+                </div>
+              )}
+
+              {/* Figma */}
+              {profile.figma && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minWidth: 0 }}>
+                  <span style={{ color: '#888', flexShrink: 0, width: 14, textAlign: 'center' }}>🎨</span>
+                  <a
+                    href={profile.figma}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={profile.figma}
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      minWidth: 0,
+                      flex: 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      Figma Design
+                    </span>
+                    <LinkOutlined style={{ fontSize: 11, flexShrink: 0 }} />
+                  </a>
+                </div>
+              )}
+
+              {/* Postman */}
+              {profile.postman && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minWidth: 0 }}>
+                  <ApiOutlined style={{ color: '#ff6c37', flexShrink: 0 }} />
+                  <a
+                    href={profile.postman}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={profile.postman}
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      minWidth: 0,
+                      flex: 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      Postman Collection
+                    </span>
+                    <LinkOutlined style={{ fontSize: 11, flexShrink: 0 }} />
+                  </a>
+                </div>
+              )}
+
+              {/* Report Document */}
+              {profile.reportUrl && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minWidth: 0 }}>
+                  <FileTextOutlined style={{ color: '#1677ff', flexShrink: 0 }} />
+                  <a
+                    href={profile.reportUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={profile.reportUrl}
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      minWidth: 0,
+                      flex: 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      Báo cáo / Tài liệu
+                    </span>
+                    <LinkOutlined style={{ fontSize: 11, flexShrink: 0 }} />
+                  </a>
+                </div>
+              )}
+            </div>
           </Card>
         </Col>
 
@@ -205,7 +350,20 @@ export default function ProfilePage() {
                   </Col>
                   <Col xs={24} sm={12}>
                     <Form.Item name="figma" label="Figma">
-                      <Input placeholder="Figma URL" />
+                      <Input prefix={<span style={{ marginRight: 2 }}>🎨</span>} placeholder="Figma URL" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={16}>
+                  <Col xs={24} sm={12}>
+                    <Form.Item name="postman" label="Postman Collection">
+                      <Input prefix={<ApiOutlined style={{ color: '#ff6c37' }} />} placeholder="Postman Collection URL" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Form.Item name="reportUrl" label="Báo cáo / Tài liệu (Report URL)">
+                      <Input prefix={<FileTextOutlined style={{ color: '#1677ff' }} />} placeholder="Link Báo cáo / Tài liệu" />
                     </Form.Item>
                   </Col>
                 </Row>
